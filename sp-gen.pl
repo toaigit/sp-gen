@@ -18,6 +18,6 @@ my $CGIDIR = '/home/stanford/public_html/cgi-bin';
 
 print "Content-type: text/html\n\n";
 print "<pre>\n\n";
-my @cmd   = ("$CGIDIR/sp-gen.sh", "-h", $SITEURL );
+my @cmd   = ("$CGIDIR/sp-gen.sh", $SITEURL );
 system (@cmd);
 print "</pre>\n\n";

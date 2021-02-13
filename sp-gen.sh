@@ -1,89 +1,28 @@
-#!/bin/sh
-#   this is an unix shell script to generate sp-key.pem and sp-cert.pem for SAML
-#   copy sp-cert.pem to the metadata file that you will be used to register with SPDB.
-#   ./sp-gen.sh -h x.stanford.edu -y 10  (change x.stanford.edu to your website)
-
-while getopts h:u:g:o:e:y:bf c
-     do
-         case $c in
-           u)         USER=$OPTARG;;
-           g)         GROUP=$OPTARG;;
-           o)         OUT=$OPTARG;;
-           b)         BATCH=1;;
-           f)         FORCE=1;;
-           h)         FQDN=$OPTARG;;
-           e)         ENTITYID=$OPTARG;;
-           y)         YEARS=$OPTARG;;
-           \?)        echo "keygen [-o output directory (default .)] [-u username to own keypair] [-g owning groupname] [-h hostname for cert] [-y years to issue cert] [-e entityID to embed in cert]"
-                      exit 1;;
-         esac
-     done
-if [ -z "$OUT" ] ; then
-    OUT=.
+#!/bin/bash
+#  Use this script to generate sp-key.pem, sp-cert.pem and sp-metadata.xml manually
+#
+if [ $# -ne 1 ] ; then
+   echo "Usage: $0 sitename"
+   exit 1
 fi
 
-if [ -n "$FORCE" ] ; then
-    rm $OUT/sp-key.pem $OUT/sp-cert.pem
-fi
+export SITENAME=$1
 
-if  [ -s $OUT/sp-key.pem -o -s $OUT/sp-cert.pem ] ; then
-    if [ -z "$BATCH" ] ; then  
-        echo The files $OUT/sp-key.pem and/or $OUT/sp-cert.pem already exist!
-        echo Use -f option to force recreation of keypair.
-        exit 2
-    fi
-    exit 0
-fi
+#  generate the sp-cert.pem and sp-key.pem files
+ ./keygen.sh -h $SITENAME
 
-if [ -z "$FQDN" ] ; then
-    FQDN=`hostname`
-fi
+#  generate the metadata.xml file
+./genmeta.sh 
+cat sp-metadata.templX | sed "s/SITENAME/$SITENAME/g" > sp-metadata.xml
 
-if [ -z "$YEARS" ] ; then
-    YEARS=10
-fi
+#  display the sp-cert.pem, sp-key.pem and metadata.xml file
+ cat sp-cert.pem
+ echo ""
+ cat sp-key.pem
+ echo ""
+ echo "Your sp-metadata.xml file"
+ echo ""
+ cat sp-metadata.xml
 
-DAYS=`expr $YEARS \* 365`
-
-if [ -z "$ENTITYID" ] ; then
-    ALTNAME=DNS:$FQDN
-else
-    ALTNAME=DNS:$FQDN,URI:$ENTITYID
-fi
-
-SSLCNF=$OUT/sp-cert.cnf
-cat >$SSLCNF <<EOF
-# OpenSSL configuration file for creating sp-cert.pem
-[req]
-prompt=no
-default_bits=2048
-encrypt_key=no
-default_md=sha1
-distinguished_name=dn
-# PrintableStrings only
-string_mask=MASK:0002
-x509_extensions=ext
-[dn]
-CN=$FQDN
-[ext]
-subjectAltName=$ALTNAME
-subjectKeyIdentifier=hash
-EOF
-
-touch $OUT/sp-key.pem
-chmod 600 $OUT/sp-key.pem
-if [ -z "$BATCH" ] ; then
-    openssl req -config $SSLCNF -new -x509 -days $DAYS -keyout $OUT/sp-key.pem -out $OUT/sp-cert.pem
-else
-    openssl req -config $SSLCNF -new -x509 -days $DAYS -keyout $OUT/sp-key.pem -out $OUT/sp-cert.pem 2> /dev/null
-fi
-rm $SSLCNF
-
-if  [ -s $OUT/sp-key.pem -a -n "$USER" ] ; then
-    chown $USER $OUT/sp-key.pem $OUT/sp-cert.pem
-fi
-
-if  [ -s $OUT/sp-key.pem -a -n "$GROUP" ] ; then
-    chgrp $GROUP $OUT/sp-key.pem $OUT/sp-cert.pem
-fi
-
+#  clean up temporary file
+rm sp-metadata.templX sp-cert.pem sp-key.pem
