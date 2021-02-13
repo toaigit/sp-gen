@@ -1,5 +1,5 @@
 # sp-gen
-Simple perl cgi script to generate sp-key.pem, sp-cert.pem and metadata.xml to use with SAML
+Simple perl cgi script to generate sp-key.pem, sp-cert.pem and metadata.xml to use with Shibboleth/SAML
 
 *  You need to put these two scripts in your cgi-bin..
 *  Enter https://yoursite/cgi-bin/sp-gen.pl?SITENAME=yoursite.
